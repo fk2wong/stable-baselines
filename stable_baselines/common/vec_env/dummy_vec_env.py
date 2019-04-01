@@ -40,6 +40,33 @@ class DummyVecEnv(VecEnv):
         return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones),
                 self.buf_infos.copy())
 
+    def step_wait_no_reward(self):
+        for env_idx in range(self.num_envs):
+            obs, self.buf_dones[env_idx], self.buf_infos[env_idx] =\
+                self.envs[env_idx].step_no_reward(self.actions[env_idx])
+            if self.buf_dones[env_idx]:
+                obs = self.envs[env_idx].reset()
+            self._save_obs(env_idx, obs)
+        return (self._obs_from_buf(), np.copy(self.buf_dones),
+                self.buf_infos.copy())
+
+    def flush_rewards(self):
+        # allRewards = []
+        # for env_idx in range(self.num_envs):
+        #     allRewards.append() = self.envs[env_idx].flush_rewards()
+
+        # numBufferedRewardsPerEnv = len(allRewards[0])
+        # self.buf_rews_array = np.zeros((self.num_envs, numBufferedRewardsPerEnv), dtype=np.float32)
+
+        # for reward_idx in range(numBufferedRewardsPerEnv):
+        #     for env_idx in range(self.num_envs):
+        #         self.buf_rews_array[env_idx][reward_idx] = allRewards[env_idx][reward_idx]
+
+        # print(self.buf_rews_array)
+        # return np.copy(self.buf_rews_array)
+
+        return np.copy(self.envs[0].flush_rewards())
+
     def reset(self):
         for env_idx in range(self.num_envs):
             obs = self.envs[env_idx].reset()

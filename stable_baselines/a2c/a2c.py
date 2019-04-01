@@ -317,6 +317,7 @@ class A2CRunner(AbstractEnvRunner):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [], [], [], [], []
         mb_states = self.states
         ep_infos = []
+        print("A2CRunner.run(), n_steps:", self.n_steps)
         for _ in range(self.n_steps):
             actions, values, states, _ = self.model.step(self.obs, self.states, self.dones)
             mb_obs.append(np.copy(self.obs))
@@ -327,7 +328,9 @@ class A2CRunner(AbstractEnvRunner):
             # Clip the actions to avoid out of bound error
             if isinstance(self.env.action_space, gym.spaces.Box):
                 clipped_actions = np.clip(actions, self.env.action_space.low, self.env.action_space.high)
-            obs, rewards, dones, infos = self.env.step(clipped_actions)
+            #obs, rewards, dones, infos = self.env.step(clipped_actions)
+            obs, dones, infos = self.env.step_no_reward(clipped_actions)
+
             for info in infos:
                 maybe_ep_info = info.get('episode')
                 if maybe_ep_info is not None:
@@ -336,7 +339,14 @@ class A2CRunner(AbstractEnvRunner):
             self.states = states
             self.dones = dones
             self.obs = obs
-            mb_rewards.append(rewards)
+            #mb_rewards.append(rewards)
+
+        # Get rewards retroactively
+        rewardList = self.env.flush_rewards()
+        for reward in rewardList:
+            mb_rewards.append(np.array([reward]))
+#
+
         mb_dones.append(self.dones)
         # batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype).swapaxes(1, 0).reshape(self.batch_ob_shape)

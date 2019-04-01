@@ -7,6 +7,9 @@ from stable_baselines.common.running_mean_std import RunningMeanStd
 
 
 class VecNormalize(VecEnvWrapper):
+
+    news_array = []
+
     """
     A moving average, normalizing wrapper for vectorized environment.
     has support for saving/loading moving average,
@@ -54,6 +57,39 @@ class VecNormalize(VecEnvWrapper):
             rews = np.clip(rews / np.sqrt(self.ret_rms.var + self.epsilon), -self.clip_reward, self.clip_reward)
         self.ret[news] = 0
         return obs, rews, news, infos
+
+    def step_wait_no_reward(self):
+        """
+        Apply sequence of actions to sequence of environments, delay getting reward until after
+        actions -> (observations, news)
+
+        where 'news' is a boolean vector indicating whether each element is new.
+        """
+        obs, news, infos = self.venv.step_wait_no_reward()
+        self.old_obs = obs
+        obs = self._normalize_observation(obs)
+
+        self.news_array.append(news)
+        return obs, news, infos
+
+
+    def flush_rewards(self):
+        """
+        Get list of rewards
+        """
+        rews = self.venv.flush_rewards()
+        count = 0
+        for rew in rews:
+            self.ret = self.ret * self.gamma + rew
+            if self.norm_reward:
+                if self.training:
+                    self.ret_rms.update(self.ret)
+                rew = np.clip(rew / np.sqrt(self.ret_rms.var + self.epsilon), -self.clip_reward, self.clip_reward)
+            self.ret[self.news_array[count]] = 0
+            count += 1
+
+        self.news_array = []
+        return rews
 
     def _normalize_observation(self, obs):
         """

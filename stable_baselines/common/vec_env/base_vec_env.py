@@ -77,6 +77,15 @@ class VecEnv(ABC):
         pass
 
     @abstractmethod
+    def step_wait_no_reward(self):
+        """
+        Wait for the step taken with step_async() but don't return reward.
+
+        :return: ([int] or [float], [float], [bool], dict) observation, done, information
+        """
+        pass
+
+    @abstractmethod
     def close(self):
         """
         Clean up the environment's resources.
@@ -92,6 +101,11 @@ class VecEnv(ABC):
         """
         self.step_async(actions)
         return self.step_wait()
+
+    def step_no_reward(self, actions):
+        # Step but don't get rewards until after
+        self.step_async(actions)
+        return self.step_wait_no_reward()
 
     def get_images(self):
         """
